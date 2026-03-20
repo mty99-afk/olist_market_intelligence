@@ -8,15 +8,25 @@ conn = duckdb.connect(str(DB_PATH))
 
 query = """
 SELECT
-    p.product_category_name,
-    COUNT(*) AS total_items,
-    ROUND(AVG(oi.price), 2) AS avg_price
-FROM order_items oi
-LEFT JOIN products p
-    ON oi.product_id = p.product_id
-GROUP BY 1
-ORDER BY total_items DESC
-LIMIT 10
+    COUNT(*) AS total_rows,
+    SUM(
+        CASE
+            WHEN order_delivered_customer_date > order_estimated_delivery_date THEN 1
+            ELSE 0
+        END
+    ) AS late_deliveries,
+    ROUND(
+        100.0 * SUM(
+            CASE
+                WHEN order_delivered_customer_date > order_estimated_delivery_date THEN 1
+                ELSE 0
+            END
+        ) / COUNT(*),
+        2
+    ) AS late_delivery_rate_pct
+FROM mart_order_items
+WHERE order_delivered_customer_date IS NOT NULL
+  AND order_estimated_delivery_date IS NOT NULL
 """
 
 result = conn.execute(query).fetchdf()
