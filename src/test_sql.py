@@ -9,24 +9,12 @@ conn = duckdb.connect(str(DB_PATH))
 query = """
 SELECT
     COUNT(*) AS total_rows,
-    SUM(
-        CASE
-            WHEN order_delivered_customer_date > order_estimated_delivery_date THEN 1
-            ELSE 0
-        END
-    ) AS late_deliveries,
-    ROUND(
-        100.0 * SUM(
-            CASE
-                WHEN order_delivered_customer_date > order_estimated_delivery_date THEN 1
-                ELSE 0
-            END
-        ) / COUNT(*),
-        2
-    ) AS late_delivery_rate_pct
-FROM mart_order_items
-WHERE order_delivered_customer_date IS NOT NULL
-  AND order_estimated_delivery_date IS NOT NULL
+    ROUND(AVG(freight_ratio), 4) AS avg_freight_ratio,
+    ROUND(AVG(product_volume_cm3), 2) AS avg_product_volume_cm3,
+    ROUND(AVG(seller_avg_review), 4) AS avg_seller_avg_review,
+    ROUND(AVG(price_vs_category_avg_ratio), 4) AS avg_price_vs_category_ratio
+FROM ml_order_reviews
+WHERE bad_review IS NOT NULL
 """
 
 result = conn.execute(query).fetchdf()
