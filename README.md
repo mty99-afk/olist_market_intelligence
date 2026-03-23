@@ -34,20 +34,20 @@ Main tables:
 
 ## ⚙️ Project Architecture
 
-data/
-├── raw/
-├── processed/
-├── mart/
-src/
-├── ingestion.py
-├── transform.py
-├── features.py
-├── train.py
-├── predict.py
-├── evaluate.py
-models/
-reports/
-sql/
+* data/
+* ├── raw/
+* ├── processed/
+* ├── mart/
+* src/
+* ├── ingestion.py
+* ├── transform.py
+*├── features.py
+* ├── train.py
+* ├── predict.py
+* ├── evaluate.py
+* models/
+* reports/
+* sql/
 
 ---
 
