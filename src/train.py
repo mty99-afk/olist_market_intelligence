@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 import duckdb
 import joblib
 
@@ -9,12 +10,22 @@ from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import classification_report, roc_auc_score, confusion_matrix
+from sklearn.metrics import (
+    classification_report,
+    roc_auc_score,
+    confusion_matrix,
+    precision_score,
+    recall_score,
+    f1_score
+)
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 DB_PATH = BASE_DIR / "data" / "mart" / "olist.duckdb"
 MODEL_DIR = BASE_DIR / "models"
+REPORTS_DIR = BASE_DIR / "reports"
+
 MODEL_DIR.mkdir(exist_ok=True)
+REPORTS_DIR.mkdir(exist_ok=True)
 
 def load_data():
     conn = duckdb.connect(str(DB_PATH))
@@ -30,12 +41,10 @@ def load_data():
         product_length_cm,
         product_height_cm,
         product_width_cm,
-        delivery_days,
         estimated_delivery_days,
-        is_late,
-        delay_vs_estimate_days,
         purchase_month,
         purchase_dayofweek,
+        purchase_hour,
         freight_ratio,
         product_volume_cm3,
         seller_total_items,
@@ -91,7 +100,17 @@ def evaluate_model(model_name, model, X_train, X_test, y_train, y_test):
     print("\nConfusion Matrix:\n")
     print(confusion_matrix(y_test, y_pred))
 
-    return roc_auc, model
+    metrics = {
+        "model_name": model_name,
+        "roc_auc": float(roc_auc),
+        "precision_bad_review": float(precision_score(y_test, y_pred, pos_label=1)),
+        "recall_bad_review": float(recall_score(y_test, y_pred, pos_label=1)),
+        "f1_bad_review": float(f1_score(y_test, y_pred, pos_label=1)),
+        "confusion_matrix": confusion_matrix(y_test, y_pred).tolist(),
+        "classification_report": classification_report(y_test, y_pred, output_dict=True),
+    }
+
+    return metrics, model
 
 def train_and_compare():
     df = load_data()
@@ -109,12 +128,10 @@ def train_and_compare():
         "product_length_cm",
         "product_height_cm",
         "product_width_cm",
-        "delivery_days",
         "estimated_delivery_days",
-        "is_late",
-        "delay_vs_estimate_days",
         "purchase_month",
         "purchase_dayofweek",
+        "purchase_hour",
         "freight_ratio",
         "product_volume_cm3",
         "seller_total_items",
@@ -158,29 +175,39 @@ def train_and_compare():
         ))
     ])
 
-    lr_auc, fitted_lr = evaluate_model(
-        "Logistic Regression", logistic_model, X_train, X_test, y_train, y_test
+    lr_metrics, fitted_lr = evaluate_model(
+        "logistic_regression_pre_delivery", logistic_model, X_train, X_test, y_train, y_test
     )
 
-    rf_auc, fitted_rf = evaluate_model(
-        "Random Forest", random_forest_model, X_train, X_test, y_train, y_test
+    rf_metrics, fitted_rf = evaluate_model(
+        "random_forest_pre_delivery", random_forest_model, X_train, X_test, y_train, y_test
     )
 
-    if rf_auc >= lr_auc:
-        best_model_name = "random_forest"
+    all_metrics = {
+        "logistic_regression_pre_delivery": lr_metrics,
+        "random_forest_pre_delivery": rf_metrics
+    }
+
+    metrics_path = REPORTS_DIR / "model_metrics_pre_delivery.json"
+    with open(metrics_path, "w", encoding="utf-8") as f:
+        json.dump(all_metrics, f, indent=4)
+
+    if rf_metrics["roc_auc"] >= lr_metrics["roc_auc"]:
+        best_model_name = "random_forest_pre_delivery"
         best_model = fitted_rf
-        best_auc = rf_auc
+        best_metrics = rf_metrics
     else:
-        best_model_name = "logistic_regression"
+        best_model_name = "logistic_regression_pre_delivery"
         best_model = fitted_lr
-        best_auc = lr_auc
+        best_metrics = lr_metrics
 
     output_path = MODEL_DIR / f"best_model_{best_model_name}.joblib"
     joblib.dump(best_model, output_path)
 
     print(f"\nMejor modelo: {best_model_name}")
-    print(f"Mejor ROC-AUC: {round(best_auc, 4)}")
+    print(f"Mejor ROC-AUC: {round(best_metrics['roc_auc'], 4)}")
     print(f"Modelo guardado en: {output_path}")
+    print(f"Métricas guardadas en: {metrics_path}")
 
 if __name__ == "__main__":
     train_and_compare()

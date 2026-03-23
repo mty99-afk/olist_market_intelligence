@@ -1,18 +1,17 @@
 from pathlib import Path
 import joblib
 import duckdb
-import numpy as np
-from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 DB_PATH = BASE_DIR / "data" / "mart" / "olist.duckdb"
-MODEL_PATH = BASE_DIR / "models" / "best_model_random_forest.joblib"
+MODEL_PATH = BASE_DIR / "models" / "best_model_random_forest_pre_delivery.joblib"
 
-def load_eval_data():
+def load_sample_data(limit=10):
     conn = duckdb.connect(str(DB_PATH))
 
-    query = """
+    query = f"""
     SELECT
+        order_id,
         price,
         freight_value,
         product_name_lenght,
@@ -22,12 +21,10 @@ def load_eval_data():
         product_length_cm,
         product_height_cm,
         product_width_cm,
-        delivery_days,
         estimated_delivery_days,
-        is_late,
-        delay_vs_estimate_days,
         purchase_month,
         purchase_dayofweek,
+        purchase_hour,
         freight_ratio,
         product_volume_cm3,
         seller_total_items,
@@ -42,36 +39,26 @@ def load_eval_data():
         bad_review
     FROM ml_order_reviews
     WHERE bad_review IS NOT NULL
+    LIMIT {limit}
     """
 
     df = conn.execute(query).fetchdf()
     conn.close()
     return df
 
-def evaluate_thresholds():
-    df = load_eval_data()
-    X = df.drop(columns=["bad_review"])
-    y = df["bad_review"]
-
+def predict_sample():
     model = joblib.load(MODEL_PATH)
-    y_proba = model.predict_proba(X)[:, 1]
+    df = load_sample_data(limit=10)
 
-    thresholds = [0.30, 0.40, 0.50, 0.60, 0.70]
+    X = df.drop(columns=["order_id", "bad_review"])
+    predictions = model.predict(X)
+    probabilities = model.predict_proba(X)[:, 1]
 
-    for threshold in thresholds:
-        y_pred = (y_proba >= threshold).astype(int)
+    output = df[["order_id", "bad_review"]].copy()
+    output["pred_bad_review"] = predictions
+    output["pred_proba_bad_review"] = probabilities
 
-        precision = precision_score(y, y_pred, zero_division=0)
-        recall = recall_score(y, y_pred, zero_division=0)
-        f1 = f1_score(y, y_pred, zero_division=0)
-        cm = confusion_matrix(y, y_pred)
-
-        print(f"\nThreshold: {threshold}")
-        print(f"Precision: {precision:.4f}")
-        print(f"Recall:    {recall:.4f}")
-        print(f"F1-score:  {f1:.4f}")
-        print("Confusion Matrix:")
-        print(cm)
+    print(output)
 
 if __name__ == "__main__":
-    evaluate_thresholds()
+    predict_sample()

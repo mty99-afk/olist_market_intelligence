@@ -41,8 +41,6 @@ def create_ml_features():
         moi.order_status,
         moi.order_purchase_timestamp,
         moi.order_approved_at,
-        moi.order_delivered_carrier_date,
-        moi.order_delivered_customer_date,
         moi.order_estimated_delivery_date,
 
         moi.product_category_name,
@@ -65,19 +63,9 @@ def create_ml_features():
             ELSE NULL
         END AS bad_review,
 
-        datediff('day', moi.order_purchase_timestamp, moi.order_delivered_customer_date) AS delivery_days,
-
-        datediff('day', moi.order_purchase_timestamp, moi.order_estimated_delivery_date) AS estimated_delivery_days,
-
-        CASE
-            WHEN moi.order_delivered_customer_date > moi.order_estimated_delivery_date THEN 1
-            ELSE 0
-        END AS is_late,
-
-        datediff('day', moi.order_estimated_delivery_date, moi.order_delivered_customer_date) AS delay_vs_estimate_days,
-
         EXTRACT('month' FROM moi.order_purchase_timestamp) AS purchase_month,
         EXTRACT('dayofweek' FROM moi.order_purchase_timestamp) AS purchase_dayofweek,
+        EXTRACT('hour' FROM moi.order_purchase_timestamp) AS purchase_hour,
 
         CASE
             WHEN moi.price > 0 THEN moi.freight_value / moi.price
@@ -85,6 +73,8 @@ def create_ml_features():
         END AS freight_ratio,
 
         (moi.product_length_cm * moi.product_height_cm * moi.product_width_cm) AS product_volume_cm3,
+
+        datediff('day', moi.order_purchase_timestamp, moi.order_estimated_delivery_date) AS estimated_delivery_days,
 
         ss.seller_total_items,
         ss.seller_avg_review,
@@ -110,7 +100,7 @@ def create_ml_features():
     conn.execute(query)
     conn.close()
 
-    print("Tabla ml_order_reviews creada correctamente con features enriquecidas.")
+    print("Tabla ml_order_reviews creada correctamente para escenario pre-entrega.")
 
 if __name__ == "__main__":
     create_ml_features()
