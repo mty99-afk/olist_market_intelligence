@@ -4,8 +4,14 @@ import duckdb
 import joblib
 import pandas as pd
 import streamlit as st
+import matplotlib.pyplot as plt
+import sys
 
 BASE_DIR = Path(__file__).resolve().parents[1]
+sys.path.append(str(BASE_DIR / "src"))
+
+from shap_utils import get_shap_for_order  # noqa: E402
+
 DB_PATH = BASE_DIR / "data" / "mart" / "olist.duckdb"
 MODEL_PATH = BASE_DIR / "models" / "best_model_random_forest_pre_delivery.joblib"
 METRICS_PATH = BASE_DIR / "reports" / "model_metrics_pre_delivery.json"
@@ -117,6 +123,47 @@ st.dataframe(
     filtered_df.sort_values("pred_proba_bad_review", ascending=False),
     use_container_width=True
 )
+
+st.markdown("---")
+
+st.subheader("Explicabilidad SHAP por pedido")
+
+order_options = filtered_df.sort_values("pred_proba_bad_review", ascending=False)["order_id"].tolist()
+
+if len(order_options) > 0:
+    selected_order = st.selectbox("Selecciona un order_id para explicar", order_options)
+
+    if st.button("Generar explicación SHAP"):
+        try:
+            shap_result = get_shap_for_order(selected_order, limit=500)
+
+            st.markdown("### Resumen del pedido")
+            st.dataframe(shap_result["order_summary"], use_container_width=True)
+
+            col_a, col_b, col_c = st.columns(3)
+            col_a.metric("Probabilidad mala review", f"{shap_result['pred_proba']:.4f}")
+            col_b.metric("Predicción", int(shap_result["pred_class"]))
+            col_c.metric("Valor real", int(shap_result["actual_bad_review"]))
+
+            shap_top = shap_result["shap_df"].head(10).copy()
+            shap_top = shap_top.sort_values("shap_value")
+
+            fig, ax = plt.subplots(figsize=(10, 6))
+            colors = ["red" if x > 0 else "blue" for x in shap_top["shap_value"]]
+            ax.barh(shap_top["feature"], shap_top["shap_value"], color=colors)
+            ax.set_title("Top 10 variables SHAP para este pedido")
+            ax.set_xlabel("Impacto en el riesgo de mala review")
+            plt.tight_layout()
+
+            st.pyplot(fig)
+
+            st.markdown("### Top variables SHAP")
+            st.dataframe(shap_result["shap_df"].head(15), use_container_width=True)
+
+        except Exception as e:
+            st.error(f"Error al generar explicación SHAP: {e}")
+else:
+    st.info("No hay pedidos disponibles para explicar con los filtros actuales.")
 
 st.markdown("---")
 
