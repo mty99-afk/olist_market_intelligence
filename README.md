@@ -6,6 +6,12 @@ In e-commerce marketplaces, negative customer experiences directly impact retent
 
 This project aims to **predict the probability of a bad customer review (score ≤ 2)** using transactional, product, and seller-level data from Olist.
 
+<p align="center">
+  <img src="images/olist-dashboard-overview.png"
+       alt="Olist Market Intelligence dashboard overview"
+       width="1000">
+</p>
+
 ---
 
 ## 🎯 Objectives
@@ -34,20 +40,19 @@ Main tables:
 
 ## ⚙️ Project Architecture
 
-* data/
-* ├── raw/
-* ├── processed/
-* ├── mart/
-* src/
-* ├── ingestion.py
-* ├── transform.py
-*├── features.py
-* ├── train.py
-* ├── predict.py
-* ├── evaluate.py
-* models/
-* reports/
-* sql/
+OLIST_MARKET_INTELLIGENCE/
+* ├── app/
+* ├── artifacts/
+* ├── config/
+* ├── data/
+* ├── images/
+* ├── models/
+* ├── notebooks/
+* ├── reports/
+* ├── sql/
+* ├── src/
+* ├── README.md
+* └── requirements.txt
 
 ---
 
@@ -81,6 +86,14 @@ Includes delivery outcome features:
 **Performance:**
 - ROC-AUC: ~0.80
 - Better predictive power
+
+
+<p align="center">
+  <img src="images/olist-risk-predictions.png"
+       alt="Pre-delivery risk predictions dashboard"
+       width="1000">
+</p>
+
 
 ---
 
@@ -120,6 +133,20 @@ Excludes future information:
 
 ---
 
+## 🔍 Model Explainability
+
+SHAP was used to explain individual model predictions and identify which variables contributed most to the predicted risk of a negative review.
+
+The dashboard allows users to select an individual order and analyze the direction and magnitude of each variable's contribution.
+
+<p align="center">
+  <img src="images/olist-shap-explanation.png"
+       alt="SHAP explanation for an individual Olist order"
+       width="1000">
+</p>
+
+---
+
 ## ⚠️ Limitations
 
 - No real-time data (batch dataset)
@@ -136,7 +163,7 @@ Excludes future information:
 - Introduce NLP features from review text
 - Use Gradient Boosting models (LightGBM / XGBoost)
 - Build real-time scoring pipeline
-- Deploy Streamlit dashboard for business users
+- Deploy the Streamlit dashboard to a public cloud environment
 
 ---
 
@@ -150,24 +177,20 @@ This solution can help:
 - Improve logistics decision-making
 - Reduce negative customer experiences
 
----
-
-## 🧠 Key Learning
-
-A critical distinction in ML systems:
-
-> The most accurate model is not always the most useful.
-
-The post-delivery model performs better, but the pre-delivery model is more aligned with real-world decision-making.
 
 ---
 
 ## 🛠️ Tech Stack
 
+## 🛠️ Tech Stack
 - Python
 - DuckDB
 - Pandas
 - Scikit-learn
+- Random Forest
+- Streamlit
+- SHAP
+- Joblib
 - Git / GitHub
 
 ---
