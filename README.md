@@ -42,8 +42,6 @@ Main tables:
 
 OLIST_MARKET_INTELLIGENCE/
 * ├── app/
-* ├── artifacts/
-* ├── config/
 * ├── data/
 * ├── images/
 * ├── models/
@@ -179,8 +177,6 @@ This solution can help:
 
 
 ---
-
-## 🛠️ Tech Stack
 
 ## 🛠️ Tech Stack
 - Python
